@@ -139,3 +139,7 @@ HCU_Plugin_MelcloudHome/
 Die Nutzung erfolgt auf eigene Gefahr. Falsche Steuerbefehle an Klimaanlage,
 Netzwerkkonfiguration oder HCU können Schäden verursachen. Der Autor übernimmt keine
 Haftung für Personen-, Sach- oder Datenschäden.
+
+## Oberfläche
+
+<img src="overview.png" alt="WebUI der Konfigurationsseite" width="800">
