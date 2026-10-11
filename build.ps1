@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 
 $PluginId = "de.community.homematic.plugin.melcloud"
 $Image = "melcloud-hcu-plugin:$Version"
-$Output = "$PluginId-$Version.tar.gz"
+$Output = Join-Path $PSScriptRoot "$PluginId-$Version.tar.gz"
 
 Write-Host "Building $Image for linux/arm64 ..." -ForegroundColor Cyan
 docker build --platform=linux/arm64 --build-arg VERSION=$Version -t $Image .
@@ -21,11 +21,11 @@ docker build --platform=linux/arm64 --build-arg VERSION=$Version -t $Image .
 Write-Host "Exporting to $Output ..." -ForegroundColor Cyan
 # Gzip the docker-save tar in place (single gzipped tar, NOT a tar of a tar).
 # No 'gzip' CLI on Windows; PowerShell pipes also mangle binary data -> use .NET.
-$Tar = "$PluginId-$Version.tar"
+$Tar = Join-Path $PSScriptRoot "$PluginId-$Version.tar"
 docker save $Image -o $Tar
 if ($LASTEXITCODE -ne 0) { throw "docker save failed" }
 $in   = [IO.File]::OpenRead($Tar)
-$out  = [IO.File]::Create($Output)
+$out  = [IO.File]::Open($Output, [IO.FileMode]::Create)
 $gz   = New-Object IO.Compression.GzipStream($out, [IO.Compression.CompressionLevel]::Optimal)
 $in.CopyTo($gz)
 $gz.Dispose(); $out.Dispose(); $in.Dispose()
