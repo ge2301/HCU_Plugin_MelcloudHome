@@ -1,0 +1,16 @@
+{
+	"name": "hcu-melcloud-plugin",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Homematic IP HCU plugin that integrates Mitsubishi MELCloud Home air conditioner (ATA) units into Homematic IP via the MELCloud Home cloud API using the Connect API.",
+	"license": "MIT",
+	"main": "src/index.js",
+	"type": "commonjs",
+	"scripts": {
+		"start": "node src/index.js"
+	},
+	"dependencies": {
+		"uuid": "^11.1.0",
+		"ws": "^8.18.3"
+	}
+}

@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+docs
+spike
+*.tar
+*.tar.gz
+.git
+.gitignore
+.dockerignore
+build.ps1
+build.sh
+README.md

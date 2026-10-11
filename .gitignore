@@ -1,0 +1,6 @@
+node_modules/
+*.tar
+*.tar.gz
+data/
+TOKEN
+plugin/TOKEN
