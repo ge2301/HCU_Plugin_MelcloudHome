@@ -60,11 +60,15 @@ const PAGE = `<!DOCTYPE html>
 	.field label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 3px; }
 	.field input[type=text], .field input[type=password], .field input[type=number] {
 		width: 100%; max-width: 380px; padding: 8px 10px; border: 1px solid #c4cdd6; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+	.field input[type=text]:focus, .field input[type=password]:focus, .field input[type=number]:focus {
+		outline: none; border-color: #d64541; box-shadow: 0 0 0 3px rgba(214, 69, 65, .35); }
 	.desc { font-size: 11.5px; color: #67788a; margin-top: 3px; }
+	.masked { color: #9aa8b5; }
 	.row { display: flex; gap: 16px; flex-wrap: wrap; }
 	.row .field { flex: 1 1 160px; }
 	.chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; }
 	.chk .mut { color: #67788a; font-size: 12px; }
+	input[type=checkbox] { accent-color: #12598C; width: 15px; height: 15px; }
 	.status { display: flex; gap: 10px; align-items: center; font-size: 13.5px; }
 	button.iconbtn { width: 24px; height: 24px; min-width: 24px; padding: 0; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 	button.iconbtn svg { width: 16px; height: 16px; display: block; }
@@ -110,12 +114,25 @@ const PAGE = `<!DOCTYPE html>
 	.sl:before { content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
 	.switch input:checked + .sl { background: #2ecc71; }
 	.switch input:checked + .sl:before { transform: translateX(24px); }
-	summary { cursor: pointer; color: #12598C; font-size: 15px; font-weight: bold; }
+	nav { display: flex; gap: 4px; margin: 0 0 16px; border-bottom: 2px solid #e3e8ee; }
+	nav button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; background: transparent; color: #67788a; border: 0; border-bottom: 3px solid transparent; border-radius: 0; margin-bottom: -2px; padding: 9px 6px; font-size: 13.5px; font-weight: bold; }
+	nav button svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
+	nav button[data-tab="settings"] svg, nav button[data-tab="control"] svg { width: 23.4px; height: 23.4px; }
+	nav button[data-tab="guide"] svg { width: 22.5px; height: 22.5px; }
+	nav button:hover { color: #12598C; }
+	nav button.active { background: transparent; color: #12598C; border-bottom-color: #12598C; }
+	.taboff { display: none; }
+	.guide h3 { color: #12598C; font-size: 13.5px; margin: 18px 0 6px; }
+	.guide p, .guide li { font-size: 13.5px; color: #33475b; margin: 5px 0; }
+	.guide ol, .guide ul { margin: 4px 0 10px; padding-left: 22px; }
+	.guide .note { background: #f2f7fb; border-left: 3px solid #12598C; border-radius: 0 6px 6px 0; padding: 8px 12px; margin: 10px 0; font-size: 13px; color: #33475b; }
 	@media (max-width: 600px) {
 		/* Abstand der Inhalte zum linken/rechten Rand der drei Container
 		   (cards) auf kleinen Screens halbiert: 24 -> 12 px. */
 		.card { padding-left: 12px; padding-right: 12px; }
 		.ac { padding-left: 8px; padding-right: 8px; }
+		/* Tabs zeigen auf kleinen Screens nur das Icon (Label im title-Attribut). */
+		.tab-label { display: none; }
 	}
 </style>
 </head>
@@ -128,8 +145,35 @@ const PAGE = `<!DOCTYPE html>
 			<div class="status"><span id="dot" class="dot"></span><span id="statusLine">Lade Status…</span><button type="button" class="iconbtn" id="refreshBtn" title="Zustand sofort neu bei MELCloud abfragen" aria-label="Status aktualisieren"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#FFFFFF"><path d="M240-478q0 45 17 87.5t53 78.5l10 10v-58q0-17 11.5-28.5T360-400q17 0 28.5 11.5T400-360v160q0 17-11.5 28.5T360-160H200q-17 0-28.5-11.5T160-200q0-17 11.5-28.5T200-240h70l-16-14q-52-46-73-105t-21-119q0-94 48-170.5T337-766q14-8 29.5-1t20.5 23q5 15-.5 30T367-691q-58 32-92.5 88.5T240-478Zm480-4q0-45-17-87.5T650-648l-10-10v58q0 17-11.5 28.5T600-560q-17 0-28.5-11.5T560-600v-160q0-17 11.5-28.5T600-800h160q17 0 28.5 11.5T800-760q0 17-11.5 28.5T760-720h-70l16 14q49 49 71.5 106.5T800-482q0 94-48 170.5T623-194q-14 8-29.5 1T573-216q-5-15 .5-30t19.5-23q58-32 92.5-88.5T720-482Z"/></svg></button></div>
 		</div>
 
+	</div>
+
+	<div class="card">
+		<nav id="tabs" aria-label="Bereiche">
+			<button type="button" class="active" data-tab="settings" title="MELCloud"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M260-200q-74.85 0-127.42-52.23Q80-304.46 80-379.31q0-68.77 47-122.07 47-53.31 116.85-57.24Q257.31-646 324.23-703q66.92-57 155.77-57 100.08 0 170.04 69.96T720-520v40h24.62q57.46 1.85 96.42 42.19Q880-397.46 880-340q0 58.85-40.58 99.42Q798.85-200 740-200H260Z"/></svg><span class="tab-label">MELCloud</span></button>
+			<button type="button" data-tab="hcu" title="HCU-Geräte"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M314.8 176.8h-40.4v78.6h39.8c24.7 0 39.1-15.6 39.1-39.6s-14.5-39-38.5-39M503.6 66.5c-2.7-30.9-27.3-55.4-58.1-58.1a2141.5 2141.5 0 0 0-379 0C35.6 11.1 11.1 35.7 8.4 66.5a2141.5 2141.5 0 0 0 0 379c2.7 30.9 27.3 55.4 58.1 58.1 63.1 5.6 126.3 8.4 189.5 8.4s126.4-2.8 189.5-8.4c30.9-2.7 55.4-27.3 58.1-58.1 5.6-63.1 8.4-126.3 8.4-189.5s-2.8-126.4-8.4-189.5M186.7 371.2h-42.4V140.9h42.4zM322 291.7h-47.6v79.4H232V140.9h90c43.7 0 74.2 30.1 74.2 74.9s-30.6 75.9-74.2 75.9"/></svg><span class="tab-label">HCU-Geräte</span></button>
+			<button type="button" data-tab="control" title="Steuerung"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-280q-83.33 0-141.67-58.28Q80-396.56 80-479.82q0-83.26 58.33-141.72Q196.67-680 280-680h400q83.33 0 141.67 58.28Q880-563.44 880-480.18q0 83.26-58.33 141.72Q763.33-280 680-280H280Zm470.77-129.14Q780-438.28 780-479.91q0-41.63-29.14-70.86Q721.72-580 680.09-580q-41.63 0-70.86 29.14Q580-521.72 580-480.09q0 41.63 29.14 70.86Q638.28-380 679.91-380q41.63 0 70.86-29.14Z"/></svg><span class="tab-label">Steuerung</span></button>
+			<button type="button" data-tab="guide" title="Anleitung"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M503.96-283.73q9.12-9.12 9.12-22.42 0-13.31-9.12-22.43-9.11-9.11-22.42-9.11-13.31 0-22.42 9.11-9.12 9.12-9.12 22.43 0 13.3 9.12 22.42 9.11 9.11 22.42 9.11 13.31 0 22.42-9.11Zm92.35-303.65q0-45.54-31.12-74.85-31.11-29.31-79.57-29.31-33.47 0-62.97 15.81t-47.19 44.65q-3.92 6.39-.88 14 3.04 7.62 10.88 10.54 7.39 2.69 15 .12 7.62-2.58 12-9.2 12.54-19.61 29.81-29.15t40.88-9.54q33.39 0 53.97 18.85 20.57 18.84 20.57 48.77 0 18-9.69 34.92t-32.15 36.92q-26 24.54-38.62 44.54-12.61 20-15.08 43.93-1.23 7.07 4.27 13.19 5.5 6.11 13.81 6.11 7.85 0 13.58-4.88 5.73-4.89 7.19-13.19 3-16.77 11.77-30.43 8.77-13.65 28.77-33.65 31.08-31.08 42.92-52.15 11.85-21.08 11.85-46ZM224.62-160q-27.62 0-46.12-18.5Q160-197 160-224.62v-510.76q0-27.62 18.5-46.12Q197-800 224.62-800h510.76q27.62 0 46.12 18.5Q800-763 800-735.38v510.76q0 27.62-18.5 46.12Q763-160 735.38-160H224.62Z"/></svg><span class="tab-label">Anleitung</span></button>
+		</nav>
 		<form id="cfg">
-		<h2>MELCloud-Zugang</h2>
+		<section id="tab-control" class="taboff">
+		<h2 style="margin-top:0">Klimasteuerung</h2>
+		<div id="controls"><span class="mut">Noch keine Klimaanlage erkannt — zuerst Zugangsdaten speichern bzw. „Verbindung testen“.</span></div>
+		</section>
+
+		<section id="tab-hcu" class="taboff">
+		<h2 style="margin-top:0">Geräte an die HCU übertragen</h2>
+		<div class="desc">Nur gehäkelte Geräte erscheinen in der Homematic-Welt (HCU-App, CCU-Programme). Die Steuerung über diese Seite funktioniert unabhängig davon immer voll — inklusive Entfeuchten und Lüfter. Änderungen hier mit „Speichern &amp; Verbinden“ übernehmen.</div>
+		<div id="exposeBox"></div>
+		<div class="btns">
+			<button type="submit" id="saveBtn">Speichern &amp; Verbinden</button>
+		</div>
+		<h2>Von der HCU übernommene Geräte</h2>
+		<table><thead><tr><th>Typ</th><th>Name</th><th>Werte</th></tr></thead>
+		<tbody id="devTable"><tr><td colspan="3" class="mut">—</td></tr></tbody></table>
+		</section>
+
+		<section id="tab-settings">
+		<h2 style="margin-top:0">MELCloud-Zugang</h2>
 		<div class="row">
 			<div class="field"><label>E-Mail</label>
 				<input type="text" id="melEmail" autocomplete="username">
@@ -137,13 +181,9 @@ const PAGE = `<!DOCTYPE html>
 			</div>
 			<div class="field"><label>Passwort</label>
 				<input type="password" id="melPassword" autocomplete="new-password">
-				<div class="desc" id="passDesc">Wird nie angezeigt — leer lassen, um das gespeicherte Passwort zu behalten.</div>
+				<div class="desc" id="passDesc">Wird nicht im Klartext angezeigt — zum Ändern neues Passwort eingeben.</div>
 			</div>
 		</div>
-		<div class="btns">
-			<button type="button" class="sec" id="pollBtn">Verbindung testen</button>
-		</div>
-
 		<h2>Betrieb</h2>
 		<div class="row">
 			<div class="field"><label>Abfrageintervall (s)</label>
@@ -155,28 +195,71 @@ const PAGE = `<!DOCTYPE html>
 				<div class="desc">Schutz vor Kontosperren — nicht zu klein wählen (Standard 2 s).</div>
 			</div>
 		</div>
-
-		<h2>Klimasteuerung</h2>
-		<div id="controls"><span class="mut">Noch keine Klimaanlage erkannt — zuerst Zugangsdaten speichern bzw. „Verbindung testen“.</span></div>
-		</form>
-	</div>
-
-	<div class="card">
-		<details>
-			<summary>Geräte an die HCU übertragen</summary>
-			<div class="desc" style="margin:6px 0;">Nur gehäkelte Geräte erscheinen in der Homematic-Welt (HCU-App, CCU-Programme). Die Steuerung über diese Seite funktioniert unabhängig davon immer voll — inklusive Entfeuchten und Lüfter. Änderungen hier mit „Speichern &amp; Verbinden“ übernehmen.
-			</div>
-			<div id="exposeBox"></div>
-		</details>
 		<div class="btns">
-			<button type="submit" form="cfg" id="saveBtn">Speichern &amp; Verbinden</button>
+			<button type="button" class="sec" id="pollBtn">Verbindung testen</button>
+			<button type="submit" id="saveBtn2">Speichern &amp; Verbinden</button>
 		</div>
-	</div>
+		</section>
 
-	<div class="card">
-		<h2 style="margin-top:0">Von der HCU übernommene Geräte</h2>
-		<table><thead><tr><th>Typ</th><th>Name</th><th>Werte</th></tr></thead>
-		<tbody id="devTable"><tr><td colspan="3" class="mut">—</td></tr></tbody></table>
+		<section id="tab-guide" class="taboff">
+		<div class="guide">
+		<h2 style="margin-top:0">Anleitung</h2>
+
+		<h3>1. Voraussetzungen</h3>
+		<ul>
+			<li>Eine Home Control Unit mit Firmware 1.4.7 oder neuer, in der dieses Plugin installiert und aktiv ist.</li>
+			<li>Ein MELCloud-Home-Konto: Ihre Klimageräte sind im Heim-WLAN angemeldet und in der App „MELCloud Home“ sichtbar und steuerbar.</li>
+			<li>Diese Konfigurationsseite erreichen Sie über den WebUI-Link auf der Plugin-Seite in HCUweb oder direkt im Browser unter http://&lt;Adresse&gt;:5300.</li>
+		</ul>
+
+		<h3>2. MELCloud-Home-Konto verbinden (Tab „MELCloud“)</h3>
+		<ol>
+			<li>Öffnen Sie den Tab „MELCloud“.</li>
+			<li>Geben Sie E-Mail-Adresse und Passwort Ihres MELCloud-Home-Kontos ein. Hinweis: Es ist das Konto der App „MELCloud Home“ (melcloudhome.com), nicht die Anmeldung des früheren Portals melcloud.com.</li>
+			<li>Klicken Sie auf „Verbindung testen“. Die Statuszeile oben muss auf Grün springen und die erkannten Geräte melden, z. B. „Verbunden · 1 Gerät(e) erkannt“.</li>
+			<li>Klicken Sie auf „Speichern &amp; Verbinden“. Die Geräteliste wird geladen und an die Home Control Unit gemeldet.</li>
+		</ol>
+		<div class="note">Das Passwort wird ausschließlich lokal im Plugin gespeichert und an keiner Stelle wieder angezeigt. Lassen Sie das Passwortfeld bei späteren Änderungen leer, bleibt das gespeicherte Passwort gültig.</div>
+
+		<h3>3. Betriebsparameter verstehen (Tab „MELCloud“, Abschnitt „Betrieb“)</h3>
+		<ul>
+			<li><b>Abfrageintervall:</b> Wie oft (in Sekunden) der Zustand Ihrer Geräte bei MELCloud abgefragt wird. Ein kleines Intervall aktualisiert die Anzeige schneller, erzeugt aber mehr Anfragen an die Cloud. Mindestwert: 30 Sekunden.</li>
+			<li><b>Mindestabstand zwischen Anfragen:</b> Pause, die das Plugin zwischen zwei Anfragen an MELCloud einhält. Das schützt Ihr Konto vor Sperren wegen zu häufiger Anfragen. Der Standardwert von 2 Sekunden ist empfohlen.</li>
+		</ul>
+
+		<h3>4. Geräte in Homematic IP übernehmen (Tab „HCU-Geräte“)</h3>
+		<ol>
+			<li>Das Plugin stellt je Klimagerät zwei Geräte bereit: „Klima“ (Thermostat mit Ist- und Solltemperatur) und „An/Aus“ (Schalter).</li>
+			<li>Diese Geräte erscheinen nach dem Speichern automatisch in der Homematic-IP-App. Ordnen Sie sie dort wie gewohnt einem Raum zu und verwenden Sie sie in Programmen.</li>
+			<li>Über die Checkboxen „Geräte an die HCU übertragen“ bestimmen Sie, welche Geräte an die Home Control Unit gemeldet werden. Ohne Haken verschwindet das Gerät nach dem Speichern aus Homematic IP; steuerbar bleibt das Gerät über diese Seite trotzdem.</li>
+			<li>Die Tabelle „Von der HCU übernommene Geräte“ zeigt, welche Werte aktuell an die Home Control Unit gemeldet werden.</li>
+		</ol>
+
+		<h3>5. Klimagerät bedienen</h3>
+		<p><b>Über die Homematic-IP-App:</b> Ein- und Ausschalten über das Gerät „An/Aus“, Solltemperatur setzen und Ist-Temperatur ablesen über das Gerät „Klima“. Die Betriebsart lässt sich in der App nicht wählen — dafür ist die Bedienung auf dieser Seite gedacht.</p>
+		<p><b>Über diese Seite (Tab „Steuerung“):</b> An/Aus, Solltemperatur mit den Schaltflächen für wärmer und kälter, sowie alle fünf Betriebsarten Auto, Heizen, Kühlen, Entfeuchten und Lüfter. Die Betriebsarten Entfeuchten und Lüfter bietet Homematic IP nicht an, sie sind nur hier wählbar. Befehle werden sofort an MELCloud gesendet; die Anzeige gleicht sich spätestens nach einem Abfrageintervall mit dem Cloud-Wert ab.</p>
+
+		<h3>6. Wichtige Hinweise</h3>
+		<ul>
+			<li>Wird das Gerät mit der Infrarot-Fernbedienung geschaltet, erkennt MELCloud diesen Vorgang oft nicht. Die angezeigten Zustände können dann von der Realität abweichen, bis Sie das Gerät wieder über App oder diese Seite schalten.</li>
+			<li>Ändern Sie Ihr MELCloud-Passwort, müssen Sie es auch auf dieser Seite neu eingeben und speichern.</li>
+			<li>Ein als „getrennt“ markiertes Gerät ist meist nicht im Heim-WLAN erreichbar. Prüfen Sie die Stromversorgung und die MELCloud-Home-App.</li>
+		</ul>
+
+		<h3>7. Fehlerfälle</h3>
+		<table>
+			<thead><tr><th>Situation</th><th>Abhilfe</th></tr></thead>
+			<tbody>
+				<tr><td>Statuszeile: „Zugangsdaten fehlen.“</td><td>Tab „MELCloud“ öffnen, E-Mail und Passwort eintragen, „Speichern &amp; Verbinden“.</td></tr>
+				<tr><td>„Verbindung testen“ meldet Ablehnung der Anmeldedaten</td><td>Passwort geändert? Neues Passwort eingeben und speichern. Wichtig: MELCloud-Home-Konto, nicht melcloud.com.</td></tr>
+				<tr><td>Geräte fehlen in der Homematic-IP-App</td><td>Tab „HCU-Geräte“: Haken gesetzt? Gespeichert? Bis zu zwei Minuten warten, danach Plugin bzw. HCU neu starten lassen.</td></tr>
+				<tr><td>Solltemperatur weicht nach Setzen ab</td><td>Grenzen und Raster der Solltemperatur kommen vom Gerät (siehe Hinweis auf der Steuerkarte, z. B. 10–31 °C in 0,5-°C-Schritten). MELCloud rundet ggf. auf den nächsten erlaubten Wert.</td></tr>
+				<tr><td>Status hinkt hinterher</td><td>„Verbindung testen“ oder das Aktualisieren-Symbol oben rechts löst eine sofortige Abfrage aus.</td></tr>
+			</tbody>
+		</table>
+		</div>
+		</section>
+		</form>
 	</div>
 </div>
 <script>
@@ -186,6 +269,13 @@ const PAGE = `<!DOCTYPE html>
 	const expose = {}; // unitId -> bool (master switch for HCU transfer)
 	const exposeDev = {}; // deviceId -> bool (per device for HCU transfer)
 	const unitState = {}; // unitId -> last known unit payload (also optimistic)
+	/* Passwortfeld: bei gespeichertem Passwort Platzhalter-Maske zeigen — das echte
+	   Passwort verlässt das Plugin nie; Klick ins Feld löscht die Maske zum Überschreiben. */
+	const PW_MASK = "************";
+	let storedPw = false, pwMasked = false;
+	function setPwMask() { $("melPassword").value = PW_MASK; pwMasked = true; $("melPassword").classList.add("masked"); }
+	function clearPwMask() { $("melPassword").value = ""; pwMasked = false; $("melPassword").classList.remove("masked"); }
+	function pwSend() { return pwMasked ? "" : $("melPassword").value; }
 	const MODE_LABELS = { Automatic: "Auto", Heat: "Heizen", Cool: "Kühlen", Dry: "Entfeuchten", Fan: "Lüfter" };
 	function devIds(unitId) { return { climate: "mc-" + unitId, power: "mc-" + unitId + "-power" }; }
 	function tempLimits(caps) {
@@ -201,7 +291,14 @@ const PAGE = `<!DOCTYPE html>
 		$("melEmail").value = c.melEmail || "";
 		$("pollIntervalSeconds").value = c.pollIntervalSeconds || 60;
 		$("minRequestGapSeconds").value = c.minRequestGapSeconds || 2;
-		if (!c.hasPassword) $("passDesc").textContent = "Noch kein Passwort gespeichert.";
+		storedPw = Boolean(c.hasPassword);
+		if (storedPw) {
+			setPwMask();
+			$("passDesc").textContent = "Gespeichert. Zum Ändern das Feld leeren und neues Passwort tippen — nicht ändern, um das gespeicherte zu behalten.";
+		} else {
+			clearPwMask();
+			$("passDesc").textContent = "Noch kein Passwort gespeichert — bitte eingeben.";
+		}
 		Object.assign(expose, c.exposeUnits || {});
 		Object.assign(exposeDev, c.exposeDevices || {});
 		renderExpose(controlUnits((await (await fetch("/api/status")).json()).units || []));
@@ -344,20 +441,31 @@ const PAGE = `<!DOCTYPE html>
 		} catch (e) { /* keep last state */ }
 	}
 
+	/* -------- Tabs (Steuerung / HCU-Geräte / Einstellungen) -------------- */
+	document.querySelectorAll("#tabs button").forEach((b) => {
+		b.addEventListener("click", () => {
+			document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("active", x === b));
+			["control", "hcu", "settings", "guide"].forEach((t) => {
+				document.getElementById("tab-" + t).classList.toggle("taboff", t !== b.dataset.tab);
+			});
+		});
+	});
+
 	$("cfg").addEventListener("submit", async (ev) => {
 		ev.preventDefault();
+		const btn = ev.submitter || $("saveBtn"); // Speichern-Button des aktiven Tabs
 		const body = {
 			melEmail: $("melEmail").value.trim(),
-			melPassword: $("melPassword").value,
+			melPassword: pwSend(),
 			pollIntervalSeconds: Number($("pollIntervalSeconds").value) || 60,
 			minRequestGapSeconds: Number($("minRequestGapSeconds").value) || 2,
 			expose,
 			exposeDevices: exposeDev,
 		};
-		await send(body, "/api/config", $("saveBtn"), "Verbinde…");
+		await send(body, "/api/config", btn, "Verbinde…");
 	});
 	$("pollBtn").addEventListener("click", async () => {
-		const body = { melEmail: $("melEmail").value.trim(), melPassword: $("melPassword").value };
+		const body = { melEmail: $("melEmail").value.trim(), melPassword: pwSend() };
 		await send(body, "/api/poll", $("pollBtn"), "Prüfe…");
 	});
 	$("refreshBtn").addEventListener("click", async () => {
@@ -370,12 +478,14 @@ const PAGE = `<!DOCTYPE html>
 		} catch (e) { banner("err", "Fehler: " + e.message); }
 		b.disabled = false; b.classList.remove("spin");
 	});
+	$("melPassword").addEventListener("focus", () => { if (pwMasked) clearPwMask(); });
+	$("melPassword").addEventListener("blur", () => { if (storedPw && $("melPassword").value === "") setPwMask(); });
 	async function send(body, url, btn, busyText) {
 		const old = btn.textContent; btn.disabled = true; btn.textContent = busyText;
 		try {
 			const r = await (await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json();
 			banner(r.status === "APPLIED" ? "ok" : "err", r.message);
-			$("melPassword").value = "";
+			clearPwMask();
 			await loadConfig(); refreshStatus();
 		} catch (e) { banner("err", "Fehler: " + e.message); }
 		btn.disabled = false; btn.textContent = old;

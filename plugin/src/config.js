@@ -145,40 +145,48 @@ function isDeviceExposed(config, deviceId) {
  */
 function buildTemplate(config, units, statusText, configUrl) {
 	const groups = {
+		webui: {
+			friendlyName: "WebUI",
+			description: "Komfortoberfläche des Plugins im Browser.",
+			order: 1,
+		},
 		account: {
 			friendlyName: "MELCloud-Zugang",
 			description: "Zugangsdaten für dein MELCloud-Home-Konto (melcloudhome.com).",
-			order: 1,
+			order: 2,
 		},
 		operation: {
 			friendlyName: "Betrieb",
 			description: "Abfrageintervall und Schutz vor zu häufigen Anfragen.",
-			order: 2,
+			order: 3,
 		},
 		devices: {
 			friendlyName: "Geräte",
 			description: "Welche MELCloud-Geräte in Homematic IP angezeigt werden.",
-			order: 3,
+			order: 4,
 		},
 		info: {
 			friendlyName: "Info",
 			description: "Verbindungsstatus.",
-			order: 4,
+			order: 5,
 		},
 	};
 
 	const properties = {};
 
 	if (configUrl) {
-		properties.__info_link = {
-			dataType: "STRING",
-			groupId: "info",
-			friendlyName: "Erweiterte Web-Konfiguration",
-			description:
-				"Kopiere die URL unten in einen neuen Tab in deinem Browser um die vollständige Konfigurationsseite zu öffnen",
-			required: "false",
+		// WEBLINK gem. Connect API 1.0.1 §6.6.11: currentValue = Link,
+		// defaultValue = zusätzlicher Text; HCUweb rendert daraus einen
+		// anklickbaren Link auf die Plugin-WebUI (Referenzmuster Bosch-Bridge).
+		properties.webui_link = {
+			dataType: "WEBLINK",
+			groupId: "webui",
+			order: 1,
+			friendlyName: "MELCloud Home Bridge WebUI",
+			description: "Vollständige Konfiguration, Klimasteuerung und Live-Status im Browser.",
 			currentValue: configUrl,
-			order: 0,
+			defaultValue: "WebUI öffnen",
+			required: false,
 		};
 	}
 
@@ -263,7 +271,7 @@ function buildTemplate(config, units, statusText, configUrl) {
 		required: "false",
 	};
 
-	return { groups, properties, ...(configUrl ? { configUrl } : {}) };
+	return { groups, properties };
 }
 
 /** Redacted copy for logs / debug output. */

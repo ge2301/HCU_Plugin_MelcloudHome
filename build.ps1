@@ -19,6 +19,16 @@ Write-Host "Building $Image for linux/arm64 ..." -ForegroundColor Cyan
 docker build --platform=linux/arm64 --build-arg VERSION=$Version -t $Image .
 
 Write-Host "Exporting to $Output ..." -ForegroundColor Cyan
-docker save $Image | gzip > $Output
+# Gzip the docker-save tar in place (single gzipped tar, NOT a tar of a tar).
+# No 'gzip' CLI on Windows; PowerShell pipes also mangle binary data -> use .NET.
+$Tar = "$PluginId-$Version.tar"
+docker save $Image -o $Tar
+if ($LASTEXITCODE -ne 0) { throw "docker save failed" }
+$in   = [IO.File]::OpenRead($Tar)
+$out  = [IO.File]::Create($Output)
+$gz   = New-Object IO.Compression.GzipStream($out, [IO.Compression.CompressionLevel]::Optimal)
+$in.CopyTo($gz)
+$gz.Dispose(); $out.Dispose(); $in.Dispose()
+Remove-Item $Tar
 
 Write-Host "Done. Upload '$Output' in the HCU web interface (developer mode)." -ForegroundColor Green
