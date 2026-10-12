@@ -27,6 +27,8 @@ const DEFAULT_CONFIG = {
 	melPassword: "",
 	pollIntervalSeconds: 60,
 	minRequestGapSeconds: 2,
+	/** Manual host for the "WebUI öffnen" link; "" = derive from the HCU SGTIN */
+	webuiHost: "",
 	/** unitId -> boolean, devices hidden only when explicitly false */
 	exposeUnits: {},
 	/** deviceId -> boolean, per-device transfer-to-HCU switch (default: true) */
@@ -97,6 +99,9 @@ function applyUpdate(config, properties) {
 			Number(map.minRequestGapSeconds) || DEFAULT_CONFIG.minRequestGapSeconds
 		);
 	}
+	// Empty host = automatic (SGTIN of the HCU). Any other value overrides the
+	// host part of the "WebUI öffnen" link, e.g. "192.168.1.20" or "hcu1-abcd.local".
+	if (map.webuiHost !== undefined) next.webuiHost = String(map.webuiHost).trim();
 	// Dynamic per-device booleans: show_<unitIdWithoutDashes>.
 	// Kept raw here; applyShowProps() resolves them onto real unit IDs,
 	// because the dash-stripping in showPropertyId is not reversible.
@@ -177,7 +182,9 @@ function buildTemplate(config, units, statusText, configUrl) {
 	if (configUrl) {
 		// WEBLINK gem. Connect API 1.0.1 §6.6.11: currentValue = Link,
 		// defaultValue = zusätzlicher Text; HCUweb rendert daraus einen
-		// anklickbaren Link auf die Plugin-WebUI (Referenzmuster Bosch-Bridge).
+		// anklickbaren Link auf die Plugin-WebUI. Der Host kommt vom SGTIN der
+		// HCU (http://hcu1-xxxx.local), nicht aus /etc/hostname — das enthält
+		// nur die Container-ID, die kein Browser im LAN auflösen kann.
 		properties.webui_link = {
 			dataType: "WEBLINK",
 			groupId: "webui",
@@ -188,7 +195,30 @@ function buildTemplate(config, units, statusText, configUrl) {
 			defaultValue: "WebUI öffnen",
 			required: false,
 		};
+	} else {
+		properties.webui_link_missing = {
+			dataType: "STRING",
+			groupId: "webui",
+			order: 1,
+			friendlyName: "MELCloud Home Bridge WebUI",
+			description:
+				"Der Host der WebUI konnte nicht ermittelt werden (SGTIN der HCU nicht lesbar). Trage unten den Host ein, z. B. hcu1-abcd.local oder die IP-Adresse der HCU.",
+			currentValue: "",
+			required: "false",
+		};
 	}
+
+	properties.webuiHost = {
+		dataType: "STRING",
+		groupId: "webui",
+		order: 2,
+		friendlyName: "Host der WebUI (leer = automatisch)",
+		description:
+			"Automatisch wird http://hcu1-XXXX.local:<Port> verwendet; XXXX sind die letzten vier Stellen des SGTIN (Unterseite der HCU, im Container unter /SGTIN). Nur ausfüllen, falls die HCU im Netzwerk unter einem anderen Namen erreichbar ist, z. B. hcu1-abcd.local oder 192.168.1.20.",
+		currentValue: config.webuiHost || "",
+		maximumLength: 120,
+		required: "false",
+	};
 
 	properties.melEmail = {
 		dataType: "STRING",

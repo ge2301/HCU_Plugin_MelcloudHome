@@ -82,11 +82,22 @@ im Container); ein manuell erzeugtes TOKEN wird dann nicht benötigt.
 
 ### 3. Konfigurieren
 
-WebUI `http://<hcu>:5300/config` (lokal: `http://localhost:5300/config`) öffnen,
-MELCloud-Zugangsdaten (E-Mail + Passwort des **MELCloud-Home**-Kontos, nicht des alten
+In **HCUweb → Plugin-Seite** des Plugins erscheint der Link **„WebUI öffnen“**. Er zeigt auf
+`http://hcu1-XXXX.local:5300` — `XXXX` sind die letzten vier Stellen des **SGTIN**
+(Unterseite der HCU). Die HCU legt ihren SGTIN nämlich als `/SGTIN` in den Plugin-Container,
+und die WebUI ist dadurch im ganzen LAN erreichbar (freigegebene Ports werden 1:1 gemappt).
+Danach die MELCloud-Zugangsdaten (E-Mail + Passwort des **MELCloud-Home**-Kontos, nicht des alten
 melcloud.com) speichern, ggf. Übertragung je Gerät an/aus — fertig. Der Erststart braucht
 einen erfolgreichen MELCloud-Login; Zugangsdaten und Cloud-Tokens bleiben ausschließlich in
 der Plugin-Datenbank (`/data/config.json`, `/data/tokens.json`, Rechte 0600).
+
+> **Link funktioniert nicht?** `http://<hcu>:5300/config` direkt im Browser öffnen (lokal beim
+> Testbetrieb `http://localhost:5300/config`). Läuft die HCU unter einem anderen Namen
+> (feste DNS-Adresse, IP, …), im Konfigurationsformular das Feld **„Host der WebUI
+> (leer = automatisch)“** ausfüllen, z. B. `192.168.1.20` oder `hcu1-abcd.local` — der Link
+> wird beim nächsten Öffnen der Seite neu gebaut. Was das Plugin verwendet, steht im
+> Plugin-Log (`WebUI-Link der HCU-Konfigurationsseite: …`). `http://<container-id>:5300`
+> (z. B. `b88b413aa83c`) ist immer falsch: Das ist nur derHostname innerhalb des Containers.
 
 ## Projektstruktur
 
@@ -105,6 +116,7 @@ HCU_Plugin_MelcloudHome/
 │       ├── melcloudAuth.js  # PKCE/Cognito-Login + Refresh
 │       ├── melcloudClient.js# /context + PUT /monitor/ataunit (Pacing)
 │       ├── config.js        # Persistenz + CONFIG_TEMPLATE
+│       ├── uiUrl.js         # WebUI-Adresse fuer den HCU-Link (SGTIN -> hcu1-xxxx.local)
 │       ├── webui.js         # eingebautes Konfigurations-/Steuer-Frontend
 │       └── logger.js
 ├── docs/KONZEPT.md       # Design-Entscheidungen, Archetyp-Analyse

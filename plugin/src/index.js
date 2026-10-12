@@ -8,6 +8,7 @@ const { MelcloudClient, ApiError } = require("./melcloudClient");
 const deviceMapper = require("./deviceMapper");
 const HcuClient = require("./hcuClient");
 const { startWebUI } = require("./webui");
+const { resolveUiBaseUrl, readSgtin } = require("./uiUrl");
 
 const UI_PORT = Number(process.env.PORT || 5300);
 
@@ -37,6 +38,7 @@ async function main() {
 	let featuresById = new Map(); // deviceId -> serialized features (delta base)
 	let announcedDeviceSig = null; // device-id signature last announced to HCU
 	let pollTimer = null;
+	let lastLoggedUiUrl = null; // avoids repeating the WebUI-URL log line
 
 	const client = new MelcloudClient({
 		minGapMs: (config.minRequestGapSeconds || 2) * 1000,
@@ -67,22 +69,29 @@ async function main() {
 	}
 
 	/**
-	 * Base URL of the embedded WebUI as reachable FROM THE LAN (the HCU maps
-	 * exposed container ports 1:1). Inside the container argv host is
-	 * "host.containers.internal" — the real LAN hostname comes from
-	 * /etc/hostname then (same technique as the rollladen reference plugin).
+	 * Base URL of the embedded WebUI as reachable FROM THE LAN — see uiUrl.js.
+	 * Re-evaluated on every CONFIG_TEMPLATE_REQUEST, so a host that the user
+	 * enters in the config form takes effect without a container restart.
 	 */
 	function uiBaseUrl() {
-		let h = host;
-		if (!h || h === "host.containers.internal") {
-			try {
-				h = require("fs").readFileSync("/etc/hostname", "utf8").trim() || "hcu1";
-			} catch {
-				h = "hcu1";
-			}
+		const url = resolveUiBaseUrl({
+			override: config.webuiHost,
+			envHost: process.env.WEBUI_HOST,
+			argvHost: host,
+			sgtin: (process.env.SGTIN || "").trim() || readSgtin(),
+			port: UI_PORT,
+		});
+		if (!url) {
+			logger.warn("WebUI-Host nicht bestimmbar (kein /SGTIN im Container) — WebUI-Link entfällt.");
 		}
-		h = h.replace(/\.local$/i, "");
-		return `http://${h}:${UI_PORT}`;
+		return url;
+	}
+
+	/** Log the link the HCU config page will show — but only when it changes. */
+	function logUiBaseUrl(url) {
+		if (url === lastLoggedUiUrl) return;
+		lastLoggedUiUrl = url;
+		if (url) logger.info(`WebUI-Link der HCU-Konfigurationsseite: ${url}/config`);
 	}
 
 	// HCU client ------------------------------------------------------------
@@ -93,8 +102,11 @@ async function main() {
 		callbacks: {
 			getReadiness: currentReadiness,
 			getDevices: currentDevices,
-			getConfigTemplate: () =>
-				configModule.buildTemplate(config, discoveredUnits(), statusText(), uiBaseUrl()),
+			getConfigTemplate: () => {
+				const uiUrl = uiBaseUrl();
+				logUiBaseUrl(uiUrl);
+				return configModule.buildTemplate(config, discoveredUnits(), statusText(), uiUrl);
+			},
 			onConfigUpdate: (properties) => applyAndConnect(properties),
 			onControlRequest: async (body) => {
 				// Echte Steuerung: HCU -> CONTROL_REQUEST -> PUT /monitor/ataunit.
@@ -357,6 +369,9 @@ async function main() {
 	});
 
 	// Start -----------------------------------------------------------------
+	// Log the URL that the HCU config page will link to, so a wrong host is
+	// visible in the plugin log without opening the config page first.
+	logUiBaseUrl(uiBaseUrl());
 	// Poll MELCloud BEFORE connecting so the DISCOVER_REQUEST that arrives
 	// immediately after connect already sees the real device list (login can
 	// take a few seconds; answering DISCOVER with 0 devices left the HCU
